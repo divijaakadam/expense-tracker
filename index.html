@@ -1,56 +1,285 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Personal Expense Tracker</title>
-<link rel="stylesheet" href="/style.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Personal Expense Tracker</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
+
 <header class="topbar">
-  <div class="brand"><div class="brand-icon">₹</div><div><h1>Personal Expense Tracker</h1><p>Simple expense management</p></div></div>
-  <button id="themeBtn" class="secondary-btn">🌙 Dark Mode</button>
+    <div class="brand">
+        <div class="brand-icon">₹</div>
+
+        <div>
+            <h1>Personal Expense Tracker</h1>
+            <p>Simple expense management</p>
+        </div>
+    </div>
+
+    <button id="themeBtn" class="secondary-btn">
+        🌙 Dark Mode
+    </button>
 </header>
+
+
 <main class="container">
-<section class="grid">
-<div class="left-column">
-  <div class="card">
-    <h2 id="formTitle">Add Expense</h2>
-    <form id="expenseForm">
-      <label for="date">Date</label><input id="date" type="date" required>
-      <label for="name">Description</label><input id="name" type="text" placeholder="e.g. Lunch, Books, Travel" required>
-      <label for="amount">Amount (₹)</label><input id="amount" type="number" min="0.01" step="0.01" placeholder="e.g. 200" required>
-      <label for="category">Category</label>
-      <select id="category">
-        <option>Food</option><option>Travel</option><option>Shopping</option><option>Bills</option><option>Health</option><option>Education</option><option>Entertainment</option><option>Other</option>
-      </select>
-      <div class="form-actions"><button class="primary-btn" type="submit" id="saveBtn">Add Expense</button><button class="secondary-btn hidden" type="button" id="cancelBtn">Cancel</button></div>
-    </form>
-    <p id="message" class="message"></p>
-  </div>
-  <div class="card">
-    <h2>Monthly Budget</h2>
-    <div class="budget-row"><input id="budget" type="number" min="0" step="0.01" placeholder="e.g. 5000"><button class="success-btn" id="budgetBtn">Set Budget</button></div>
-    <div class="progress"><span id="progressBar"></span></div><p id="budgetText">Budget: ₹0</p>
-  </div>
-</div>
-<div class="right-column">
-  <section class="summary">
-    <div class="summary-card blue"><span class="summary-icon">₹</span><div><small>Total Expenses</small><strong id="total">₹0</strong></div></div>
-    <div class="summary-card green"><span class="summary-icon">☷</span><div><small>Number of Expenses</small><strong id="count">0</strong></div></div>
-    <div class="summary-card red"><span class="summary-icon">◔</span><div><small>Average Expense</small><strong id="average">₹0</strong></div></div>
-  </section>
-  <div class="card">
-    <div class="section-heading"><h2>Expenses</h2><button class="primary-btn small" onclick="location.href='/export.csv'">↓ Export CSV</button></div>
-    <div class="filters"><input id="search" type="search" placeholder="🔍 Search expenses..."><select id="filterCategory"><option value="">All Categories</option><option>Food</option><option>Travel</option><option>Shopping</option><option>Bills</option><option>Health</option><option>Education</option><option>Entertainment</option><option>Other</option></select></div>
-    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Amount (₹)</th><th>Category</th><th>Actions</th></tr></thead><tbody id="expenseRows"></tbody></table></div>
-    <p id="empty" class="empty hidden">No expenses found.</p>
-  </div>
-  <div class="card chart-card"><h2>Spending by Category</h2><canvas id="expenseChart"></canvas></div>
-</div>
-</section>
+
+    <section class="grid">
+
+        <!-- LEFT SIDE -->
+        <div class="left-column">
+
+            <!-- ADD EXPENSE -->
+            <div class="card">
+
+                <h2 id="formTitle">Add Expense</h2>
+
+                <form id="expenseForm">
+
+                    <label for="date">Date</label>
+                    <input type="date" id="date" required>
+
+                    <label for="name">Description</label>
+                    <input
+                        type="text"
+                        id="name"
+                        placeholder="e.g. Lunch, Books, Travel"
+                        required
+                    >
+
+                    <label for="amount">Amount (₹)</label>
+                    <input
+                        type="number"
+                        id="amount"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="e.g. 200"
+                        required
+                    >
+
+                    <label for="category">Category</label>
+
+                    <select id="category">
+                        <option>Food</option>
+                        <option>Travel</option>
+                        <option>Shopping</option>
+                        <option>Bills</option>
+                        <option>Health</option>
+                        <option>Education</option>
+                        <option>Entertainment</option>
+                        <option>Other</option>
+                    </select>
+
+                    <div class="form-actions">
+
+                        <button
+                            type="submit"
+                            class="primary-btn"
+                            id="saveBtn"
+                        >
+                            Add Expense
+                        </button>
+
+                        <button
+                            type="button"
+                            class="secondary-btn hidden"
+                            id="cancelBtn"
+                        >
+                            Cancel
+                        </button>
+
+                    </div>
+
+                </form>
+
+                <p id="message" class="message"></p>
+
+            </div>
+
+
+            <!-- BUDGET -->
+            <div class="card">
+
+                <h2>Monthly Budget</h2>
+
+                <div class="budget-row">
+
+                    <input
+                        type="number"
+                        id="budget"
+                        min="0"
+                        step="0.01"
+                        placeholder="e.g. 5000"
+                    >
+
+                    <button
+                        class="success-btn"
+                        id="budgetBtn"
+                    >
+                        Set Budget
+                    </button>
+
+                </div>
+
+                <div class="progress">
+                    <span id="progressBar"></span>
+                </div>
+
+                <p id="budgetText">
+                    Budget: ₹0
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- RIGHT SIDE -->
+        <div class="right-column">
+
+            <!-- SUMMARY -->
+            <section class="summary">
+
+                <div class="summary-card blue">
+
+                    <span class="summary-icon">₹</span>
+
+                    <div>
+                        <small>Total Expenses</small>
+                        <strong id="total">₹0</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="summary-card green">
+
+                    <span class="summary-icon">☷</span>
+
+                    <div>
+                        <small>Number of Expenses</small>
+                        <strong id="count">0</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="summary-card red">
+
+                    <span class="summary-icon">◔</span>
+
+                    <div>
+                        <small>Average Expense</small>
+                        <strong id="average">₹0</strong>
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- EXPENSE TABLE -->
+            <div class="card">
+
+                <div class="section-heading">
+
+                    <h2>Expenses</h2>
+
+                    <button
+                        class="primary-btn small"
+                        id="exportBtn"
+                    >
+                        ↓ Export CSV
+                    </button>
+
+                </div>
+
+
+                <div class="filters">
+
+                    <input
+                        type="search"
+                        id="search"
+                        placeholder="🔍 Search expenses..."
+                    >
+
+                    <select id="filterCategory">
+
+                        <option value="">
+                            All Categories
+                        </option>
+
+                        <option>Food</option>
+                        <option>Travel</option>
+                        <option>Shopping</option>
+                        <option>Bills</option>
+                        <option>Health</option>
+                        <option>Education</option>
+                        <option>Entertainment</option>
+                        <option>Other</option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="table-wrap">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount (₹)</th>
+                                <th>Category</th>
+                                <th>Actions</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="expenseRows"></tbody>
+
+                    </table>
+
+                </div>
+
+
+                <p
+                    id="empty"
+                    class="empty"
+                >
+                    No expenses found.
+                </p>
+
+            </div>
+
+
+            <!-- CHART -->
+            <div class="card chart-card">
+
+                <h2>Spending by Category</h2>
+
+                <canvas id="expenseChart"></canvas>
+
+            </div>
+
+        </div>
+
+    </section>
+
 </main>
-<script src="/script.js"></script>
+
+
+<script src="script.js"></script>
+
 </body>
 </html>
