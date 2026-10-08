@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal Expense Tracker</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="card top">
+    <div><h1>Personal Expense Tracker</h1><p class="muted">Add, view, filter and manage your daily expenses.</p></div>
+    <button id="theme" class="ghost" type="button">Dark mode</button>
+  </header>
+
+  <main class="grid">
+    <section class="card">
+      <h2 id="formTitle">Add Expense</h2>
+      <label>Expense Name<input id="name" placeholder="e.g. Lunch"></label>
+      <label>Amount (₹)<input id="amount" type="number" min="0" step="0.01" placeholder="e.g. 250"></label>
+      <label>Category<select id="category">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select></label>
+      <label>Date<input id="date" type="date"></label>
+      <p id="error" class="error" role="alert"></p>
+      <button id="save" class="primary" type="button">Add Expense</button>
+      <button id="cancel" class="ghost wide" type="button" hidden>Cancel edit</button>
+
+      <h3>Monthly budget</h3>
+      <div class="row"><input id="budget" type="number" min="0" placeholder="e.g. 5000"><button id="setBudget" class="ghost" type="button">Save</button></div>
+      <div class="bar"><div id="barFill"></div></div>
+      <p id="budgetText" class="muted small">No budget set.</p>
+    </section>
+
+    <section class="card">
+      <h2>Dashboard</h2>
+      <div class="stats">
+        <div><span>Total Expense</span><b id="total">₹0.00</b></div>
+        <div><span>Number of Expenses</span><b id="count">0</b></div>
+        <div><span>Average Expense</span><b id="avg">₹0.00</b></div>
+      </div>
+      <div class="charts">
+        <div><canvas id="pie"></canvas></div>
+        <div><canvas id="bars"></canvas></div>
+      </div>
+      <div class="filters">
+        <input id="search" placeholder="Search expenses...">
+        <select id="fCat"><option value="">All Categories</option>{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select>
+        <input id="fMonth" type="month" title="Filter by month">
+        <select id="sort">
+          <option value="date_desc">Newest first</option><option value="date_asc">Oldest first</option>
+          <option value="amt_desc">Highest amount</option><option value="amt_asc">Lowest amount</option>
+        </select>
+        <a class="ghost btn" href="/export.csv">Export CSV</a>
+      </div>
+      <div class="scroll"><table>
+        <thead><tr><th>Expense</th><th>Amount</th><th>Category</th><th>Date</th><th>Action</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+      <p id="empty" class="muted" hidden>No expenses found. Add your first one on the left.</p>
+    </section>
+  </main>
+</div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
