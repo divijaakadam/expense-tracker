@@ -1,13 +1,19 @@
-let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+// ===============================
+// PERSONAL EXPENSE TRACKER
+// GitHub Pages Version
+// Uses Local Storage - No Database
+// ===============================
 
+let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
 let budget = Number(localStorage.getItem("budget")) || 0;
 
 let editIndex = -1;
+let chart = null;
 
-let chart;
 
-
-/* ELEMENTS */
+// ===============================
+// GET HTML ELEMENTS
+// ===============================
 
 const expenseForm = document.getElementById("expenseForm");
 
@@ -24,6 +30,7 @@ const countElement = document.getElementById("count");
 const averageElement = document.getElementById("average");
 
 const budgetInput = document.getElementById("budget");
+const budgetBtn = document.getElementById("budgetBtn");
 const budgetText = document.getElementById("budgetText");
 const progressBar = document.getElementById("progressBar");
 
@@ -33,9 +40,7 @@ const filterCategory = document.getElementById("filterCategory");
 const themeBtn = document.getElementById("themeBtn");
 
 const cancelBtn = document.getElementById("cancelBtn");
-
 const saveBtn = document.getElementById("saveBtn");
-
 const formTitle = document.getElementById("formTitle");
 
 const message = document.getElementById("message");
@@ -43,20 +48,25 @@ const message = document.getElementById("message");
 const exportBtn = document.getElementById("exportBtn");
 
 
-/* SET TODAY'S DATE */
+// ===============================
+// SET TODAY'S DATE
+// ===============================
 
 const today = new Date();
 
-const year = today.getFullYear();
+const todayString =
+    today.getFullYear() +
+    "-" +
+    String(today.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(today.getDate()).padStart(2, "0");
 
-const month = String(today.getMonth() + 1).padStart(2, "0");
-
-const day = String(today.getDate()).padStart(2, "0");
-
-dateInput.value = `${year}-${month}-${day}`;
+dateInput.value = todayString;
 
 
-/* SAVE DATA */
+// ===============================
+// SAVE DATA
+// ===============================
 
 function saveData() {
 
@@ -67,117 +77,130 @@ function saveData() {
 
     localStorage.setItem(
         "budget",
-        budget
+        String(budget)
     );
 }
 
 
-/* ADD / EDIT EXPENSE */
+// ===============================
+// SHOW MESSAGE
+// ===============================
 
-expenseForm.addEventListener("submit", function(event) {
+function showMessage(text) {
+
+    message.textContent = text;
+
+    setTimeout(function () {
+        message.textContent = "";
+    }, 2500);
+}
+
+
+// ===============================
+// ADD EXPENSE
+// ===============================
+
+expenseForm.addEventListener("submit", function (event) {
 
     event.preventDefault();
 
     const date = dateInput.value;
-
-    const name = nameInput.value.trim();
-
-    const amount = Number(amountInput.value);
-
+    const description = nameInput.value.trim();
+    const amount = parseFloat(amountInput.value);
     const category = categoryInput.value;
 
+    if (!date) {
+        alert("Please select a date.");
+        return;
+    }
 
-    if (!date || !name || amount <= 0) {
+    if (!description) {
+        alert("Please enter a description.");
+        return;
+    }
 
-        showMessage(
-            "Please enter valid expense details."
-        );
-
+    if (isNaN(amount) || amount <= 0) {
+        alert("Please enter a valid amount.");
         return;
     }
 
 
     const expense = {
         date: date,
-        name: name,
+        name: description,
         amount: amount,
         category: category
     };
 
 
+    // ADD
     if (editIndex === -1) {
 
         expenses.push(expense);
 
-        showMessage("Expense added successfully.");
+        showMessage("Expense added successfully!");
 
-    } else {
+    }
+
+    // EDIT
+    else {
 
         expenses[editIndex] = expense;
-
-        showMessage("Expense updated successfully.");
 
         editIndex = -1;
 
         saveBtn.textContent = "Add Expense";
-
         formTitle.textContent = "Add Expense";
 
         cancelBtn.classList.add("hidden");
+
+        showMessage("Expense updated successfully!");
     }
 
 
+    // Save to browser
     saveData();
 
+
+    // Clear form
     expenseForm.reset();
 
-    dateInput.value = `${year}-${month}-${day}`;
+    dateInput.value = todayString;
 
+
+    // IMPORTANT
     renderExpenses();
 
 });
 
 
-/* SHOW MESSAGE */
-
-function showMessage(text) {
-
-    message.textContent = text;
-
-    setTimeout(function() {
-
-        message.textContent = "";
-
-    }, 2500);
-}
-
-
-/* DISPLAY EXPENSES */
+// ===============================
+// DISPLAY EXPENSES
+// ===============================
 
 function renderExpenses() {
 
     const searchText =
-        searchInput.value.toLowerCase();
+        searchInput.value.toLowerCase().trim();
 
     const selectedCategory =
         filterCategory.value;
 
 
-    const filteredExpenses = expenses.filter(
-        function(expense) {
+    const filteredExpenses = expenses.filter(function (expense) {
 
-            const matchesSearch =
-                expense.name
-                    .toLowerCase()
-                    .includes(searchText);
+        const matchesSearch =
+            expense.name
+                .toLowerCase()
+                .includes(searchText);
 
-            const matchesCategory =
-                selectedCategory === "" ||
-                expense.category === selectedCategory;
+        const matchesCategory =
+            selectedCategory === "" ||
+            expense.category === selectedCategory;
 
-            return matchesSearch && matchesCategory;
-        }
-    );
+        return matchesSearch && matchesCategory;
+
+    });
 
 
     expenseRows.innerHTML = "";
@@ -192,7 +215,7 @@ function renderExpenses() {
         empty.classList.add("hidden");
 
 
-        filteredExpenses.forEach(function(expense) {
+        filteredExpenses.forEach(function (expense) {
 
             const originalIndex =
                 expenses.indexOf(expense);
@@ -204,34 +227,30 @@ function renderExpenses() {
 
             row.innerHTML = `
 
-                <td>${expense.date}</td>
+                <td>${escapeHTML(expense.date)}</td>
 
                 <td>${escapeHTML(expense.name)}</td>
 
-                <td>₹${expense.amount.toFixed(2)}</td>
+                <td>₹${Number(expense.amount).toFixed(2)}</td>
 
-                <td>${expense.category}</td>
+                <td>${escapeHTML(expense.category)}</td>
 
                 <td>
-
                     <div class="action-buttons">
 
                         <button
                             class="edit-btn"
-                            onclick="editExpense(${originalIndex})"
-                        >
+                            onclick="editExpense(${originalIndex})">
                             Edit
                         </button>
 
                         <button
                             class="delete-btn"
-                            onclick="deleteExpense(${originalIndex})"
-                        >
+                            onclick="deleteExpense(${originalIndex})">
                             Delete
                         </button>
 
                     </div>
-
                 </td>
             `;
 
@@ -243,20 +262,22 @@ function renderExpenses() {
     }
 
 
+    // Update everything
     updateSummary();
-
     updateBudget();
-
     updateChart();
 
 }
 
 
-/* ESCAPE HTML */
+// ===============================
+// SECURITY
+// ===============================
 
 function escapeHTML(text) {
 
-    const div = document.createElement("div");
+    const div =
+        document.createElement("div");
 
     div.textContent = text;
 
@@ -264,28 +285,77 @@ function escapeHTML(text) {
 }
 
 
-/* EDIT */
+// ===============================
+// UPDATE SUMMARY
+// ===============================
+
+function updateSummary() {
+
+    let total = 0;
+
+
+    expenses.forEach(function (expense) {
+
+        total += Number(expense.amount);
+
+    });
+
+
+    const count =
+        expenses.length;
+
+
+    const average =
+        count > 0
+            ? total / count
+            : 0;
+
+
+    totalElement.textContent =
+        "₹" + total.toFixed(2);
+
+
+    countElement.textContent =
+        count;
+
+
+    averageElement.textContent =
+        "₹" + average.toFixed(2);
+
+}
+
+
+// ===============================
+// EDIT EXPENSE
+// ===============================
 
 function editExpense(index) {
 
-    const expense = expenses[index];
+    const expense =
+        expenses[index];
 
 
-    dateInput.value = expense.date;
+    dateInput.value =
+        expense.date;
 
-    nameInput.value = expense.name;
+    nameInput.value =
+        expense.name;
 
-    amountInput.value = expense.amount;
+    amountInput.value =
+        expense.amount;
 
-    categoryInput.value = expense.category;
+    categoryInput.value =
+        expense.category;
 
 
     editIndex = index;
 
 
-    formTitle.textContent = "Edit Expense";
+    formTitle.textContent =
+        "Edit Expense";
 
-    saveBtn.textContent = "Update Expense";
+    saveBtn.textContent =
+        "Update Expense";
 
     cancelBtn.classList.remove("hidden");
 
@@ -298,16 +368,18 @@ function editExpense(index) {
 }
 
 
-/* CANCEL EDIT */
+// ===============================
+// CANCEL EDIT
+// ===============================
 
-cancelBtn.addEventListener("click", function() {
+cancelBtn.addEventListener("click", function () {
 
     editIndex = -1;
 
     expenseForm.reset();
 
     dateInput.value =
-        `${year}-${month}-${day}`;
+        todayString;
 
     formTitle.textContent =
         "Add Expense";
@@ -320,15 +392,13 @@ cancelBtn.addEventListener("click", function() {
 });
 
 
-/* DELETE */
+// ===============================
+// DELETE EXPENSE
+// ===============================
 
 function deleteExpense(index) {
 
-    const confirmed =
-        confirm("Delete this expense?");
-
-
-    if (!confirmed) {
+    if (!confirm("Are you sure you want to delete this expense?")) {
         return;
     }
 
@@ -342,96 +412,62 @@ function deleteExpense(index) {
 }
 
 
-/* SUMMARY */
+// ===============================
+// MONTHLY BUDGET
+// ===============================
 
-function updateSummary() {
+budgetBtn.addEventListener("click", function () {
 
-    let total = 0;
-
-
-    expenses.forEach(function(expense) {
-
-        total += Number(expense.amount);
-
-    });
+    const newBudget =
+        parseFloat(budgetInput.value);
 
 
-    const count = expenses.length;
+    if (isNaN(newBudget) || newBudget < 0) {
+
+        alert("Please enter a valid budget.");
+
+        return;
+    }
 
 
-    const average =
-        count > 0 ? total / count : 0;
+    budget = newBudget;
 
+    saveData();
 
-    totalElement.textContent =
-        `₹${total.toFixed(2)}`;
+    budgetInput.value = "";
 
+    updateBudget();
 
-    countElement.textContent =
-        count;
-
-
-    averageElement.textContent =
-        `₹${average.toFixed(2)}`;
-
-}
-
-
-/* BUDGET */
-
-document
-    .getElementById("budgetBtn")
-    .addEventListener("click", function() {
-
-        const value =
-            Number(budgetInput.value);
-
-
-        if (value < 0) {
-
-            alert("Enter a valid budget.");
-
-            return;
-        }
-
-
-        budget = value;
-
-        saveData();
-
-        updateBudget();
-
-        budgetInput.value = "";
-
-    });
+});
 
 
 function updateBudget() {
 
-    let total = 0;
+    let totalSpent = 0;
 
 
-    expenses.forEach(function(expense) {
+    expenses.forEach(function (expense) {
 
-        total += Number(expense.amount);
+        totalSpent += Number(expense.amount);
 
     });
 
 
     budgetText.textContent =
-        `Budget: ₹${budget.toFixed(2)} | Spent: ₹${total.toFixed(2)}`;
+        "Budget: ₹" +
+        budget.toFixed(2) +
+        " | Spent: ₹" +
+        totalSpent.toFixed(2);
 
 
     if (budget > 0) {
 
         let percentage =
-            (total / budget) * 100;
+            (totalSpent / budget) * 100;
 
 
         if (percentage > 100) {
-
             percentage = 100;
-
         }
 
 
@@ -440,14 +476,16 @@ function updateBudget() {
 
     } else {
 
-        progressBar.style.width = "0%";
-
+        progressBar.style.width =
+            "0%";
     }
 
 }
 
 
-/* SEARCH */
+// ===============================
+// SEARCH
+// ===============================
 
 searchInput.addEventListener(
     "input",
@@ -455,7 +493,9 @@ searchInput.addEventListener(
 );
 
 
-/* CATEGORY FILTER */
+// ===============================
+// CATEGORY FILTER
+// ===============================
 
 filterCategory.addEventListener(
     "change",
@@ -463,18 +503,20 @@ filterCategory.addEventListener(
 );
 
 
-/* DARK MODE */
+// ===============================
+// DARK MODE
+// ===============================
 
-themeBtn.addEventListener("click", function() {
+themeBtn.addEventListener("click", function () {
 
     document.body.classList.toggle("dark");
 
 
-    const darkMode =
+    const dark =
         document.body.classList.contains("dark");
 
 
-    if (darkMode) {
+    if (dark) {
 
         themeBtn.textContent =
             "☀️ Light Mode";
@@ -499,8 +541,7 @@ themeBtn.addEventListener("click", function() {
 });
 
 
-/* LOAD DARK MODE */
-
+// Load dark mode
 if (
     localStorage.getItem("darkMode") === "true"
 ) {
@@ -509,17 +550,18 @@ if (
 
     themeBtn.textContent =
         "☀️ Light Mode";
-
 }
 
 
-/* EXPORT CSV */
+// ===============================
+// EXPORT CSV
+// ===============================
 
-exportBtn.addEventListener("click", function() {
+exportBtn.addEventListener("click", function () {
 
     if (expenses.length === 0) {
 
-        alert("There are no expenses to export.");
+        alert("No expenses available to export.");
 
         return;
     }
@@ -529,10 +571,14 @@ exportBtn.addEventListener("click", function() {
         "Date,Description,Amount,Category\n";
 
 
-    expenses.forEach(function(expense) {
+    expenses.forEach(function (expense) {
+
+        const description =
+            expense.name.replace(/"/g, '""');
+
 
         csv +=
-            `"${expense.date}","${expense.name.replace(/"/g, '""')}","${expense.amount}","${expense.category}"\n`;
+            `"${expense.date}","${description}","${expense.amount}","${expense.category}"\n`;
 
     });
 
@@ -540,7 +586,9 @@ exportBtn.addEventListener("click", function() {
     const blob =
         new Blob(
             [csv],
-            { type: "text/csv;charset=utf-8;" }
+            {
+                type: "text/csv;charset=utf-8;"
+            }
         );
 
 
@@ -555,7 +603,7 @@ exportBtn.addEventListener("click", function() {
     link.href = url;
 
     link.download =
-        "expenses.csv";
+        "personal-expenses.csv";
 
 
     document.body.appendChild(link);
@@ -564,29 +612,38 @@ exportBtn.addEventListener("click", function() {
 
     document.body.removeChild(link);
 
+
     URL.revokeObjectURL(url);
 
 });
 
 
-/* CHART */
+// ===============================
+// CHART
+// ===============================
 
 function updateChart() {
 
     const categoryTotals = {};
 
 
-    expenses.forEach(function(expense) {
+    expenses.forEach(function (expense) {
 
-        if (!categoryTotals[expense.category]) {
+        const category =
+            expense.category;
 
-            categoryTotals[expense.category] = 0;
+        const amount =
+            Number(expense.amount);
+
+
+        if (!categoryTotals[category]) {
+
+            categoryTotals[category] = 0;
 
         }
 
 
-        categoryTotals[expense.category] +=
-            Number(expense.amount);
+        categoryTotals[category] += amount;
 
     });
 
@@ -603,52 +660,67 @@ function updateChart() {
         document.getElementById("expenseChart");
 
 
-    if (chart) {
+    // If Chart.js isn't available,
+    // don't stop the rest of the application.
+    if (
+        typeof Chart === "undefined"
+    ) {
+
+        return;
+    }
+
+
+    if (chart !== null) {
 
         chart.destroy();
 
     }
 
 
-    chart = new Chart(canvas, {
+    chart =
+        new Chart(canvas, {
 
-        type: "doughnut",
+            type: "doughnut",
 
-        data: {
+            data: {
 
-            labels: labels,
+                labels: labels,
 
-            datasets: [
+                datasets: [
 
-                {
-                    data: values
-                }
+                    {
+                        data: values
+                    }
 
-            ]
+                ]
 
-        },
+            },
 
-        options: {
+            options: {
 
-            responsive: true,
+                responsive: true,
 
-            plugins: {
+                maintainAspectRatio: false,
 
-                legend: {
+                plugins: {
 
-                    position: "bottom"
+                    legend: {
+
+                        position: "bottom"
+
+                    }
 
                 }
 
             }
 
-        }
-
-    });
+        });
 
 }
 
 
-/* INITIAL DISPLAY */
+// ===============================
+// INITIAL LOAD
+// ===============================
 
 renderExpenses();
