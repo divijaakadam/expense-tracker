@@ -27,18 +27,6 @@ Users can add, edit, delete, search and filter expenses, view spending statistic
 - **JavaScript** – Frontend interactions
 - **Chart.js** – Expense chart
 
-## 🚀 How to Run
-
-```bash
-pip install -r requirements.txt
-python app.py
-```
-
-Then open:
-
-```text
-http://127.0.0.1:5000
-```
 
 ## 📂 Project Structure
 
@@ -56,8 +44,3 @@ Personal-Expense-Tracker/
 ## 🎯 Project Purpose
 
 This project demonstrates a simple web application developed using Python and Flask for managing personal expenses through a clean and easy-to-use interface.
-
-## 👩‍💻 Author
-
-**Divija Kadam**  
-B.Tech Information Technology Student
