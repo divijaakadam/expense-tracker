@@ -1,10 +1,654 @@
-let editingId=null, chart=null;const $=id=>document.getElementById(id);
-function money(v){return `₹${Number(v).toLocaleString('en-IN',{maximumFractionDigits:2})}`}
-async function loadExpenses(){const p=new URLSearchParams({q:$('search').value,category:$('filterCategory').value});const r=await fetch(`/api/expenses?${p}`);const d=await r.json();$('total').textContent=money(d.total);$('count').textContent=d.count;$('average').textContent=money(d.average);$('budget').value=d.budget||'';const pct=d.budget?Math.min(d.total/d.budget*100,100):0;$('progressBar').style.width=`${pct}%`;$('budgetText').textContent=`Budget: ${money(d.budget)} | Spent: ${money(d.total)}`;const rows=$('expenseRows');rows.innerHTML='';$('empty').classList.toggle('hidden',d.expenses.length!==0);d.expenses.forEach(e=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${e.date}</td><td>${safe(e.name)}</td><td>${money(e.amount)}</td><td><span class="badge">${safe(e.category)}</span></td><td><button class="action-btn edit" onclick="startEdit(${e.id})">Edit</button><button class="action-btn delete" onclick="removeExpense(${e.id})">Delete</button></td>`;rows.appendChild(tr)});updateChart(d.expenses)}
-function safe(v){return v.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-function updateChart(rows){const totals={};rows.forEach(e=>totals[e.category]=(totals[e.category]||0)+Number(e.amount);if(chart)chart.destroy();chart=new Chart($('expenseChart'),{type:'doughnut',data:{labels:Object.keys(totals),datasets:[{data:Object.values(totals)}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}})}
-$('expenseForm').addEventListener('submit',async e=>{e.preventDefault();const body={date:$('date').value,name:$('name').value,amount:$('amount').value,category:$('category').value};const url=editingId?`/api/expenses/${editingId}`:'/api/expenses';const method=editingId?'PUT':'POST';const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok){$('message').textContent=d.error;return}resetForm();loadExpenses()});
-async function startEdit(id){const d=await (await fetch('/api/expenses')).json();const e=d.expenses.find(x=>x.id===id);if(!e)return;editingId=id;$('formTitle').textContent='Edit Expense';$('saveBtn').textContent='Update Expense';$('cancelBtn').classList.remove('hidden');$('date').value=e.date;$('name').value=e.name;$('amount').value=e.amount;$('category').value=e.category;scrollTo({top:0,behavior:'smooth'})}
-async function removeExpense(id){if(!confirm('Delete this expense?'))return;await fetch(`/api/expenses/${id}`,{method:'DELETE'});loadExpenses()}
-function resetForm(){editingId=null;$('formTitle').textContent='Add Expense';$('saveBtn').textContent='Add Expense';$('cancelBtn').classList.add('hidden');$('expenseForm').reset();$('date').value=new Date().toISOString().slice(0,10);$('message').textContent=''}
-$('cancelBtn').addEventListener('click',resetForm);$('search').addEventListener('input',loadExpenses);$('filterCategory').addEventListener('change',loadExpenses);$('budgetBtn').addEventListener('click',async()=>{const r=await fetch('/api/budget',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({budget:$('budget').value})});const d=await r.json();if(!r.ok){$('message').textContent=d.error;return}loadExpenses()});$('themeBtn').addEventListener('click',()=>{document.body.classList.toggle('dark');$('themeBtn').textContent=document.body.classList.contains('dark')?'☀️ Light Mode':'🌙 Dark Mode'});resetForm();loadExpenses();
+let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+
+let budget = Number(localStorage.getItem("budget")) || 0;
+
+let editIndex = -1;
+
+let chart;
+
+
+/* ELEMENTS */
+
+const expenseForm = document.getElementById("expenseForm");
+
+const dateInput = document.getElementById("date");
+const nameInput = document.getElementById("name");
+const amountInput = document.getElementById("amount");
+const categoryInput = document.getElementById("category");
+
+const expenseRows = document.getElementById("expenseRows");
+const empty = document.getElementById("empty");
+
+const totalElement = document.getElementById("total");
+const countElement = document.getElementById("count");
+const averageElement = document.getElementById("average");
+
+const budgetInput = document.getElementById("budget");
+const budgetText = document.getElementById("budgetText");
+const progressBar = document.getElementById("progressBar");
+
+const searchInput = document.getElementById("search");
+const filterCategory = document.getElementById("filterCategory");
+
+const themeBtn = document.getElementById("themeBtn");
+
+const cancelBtn = document.getElementById("cancelBtn");
+
+const saveBtn = document.getElementById("saveBtn");
+
+const formTitle = document.getElementById("formTitle");
+
+const message = document.getElementById("message");
+
+const exportBtn = document.getElementById("exportBtn");
+
+
+/* SET TODAY'S DATE */
+
+const today = new Date();
+
+const year = today.getFullYear();
+
+const month = String(today.getMonth() + 1).padStart(2, "0");
+
+const day = String(today.getDate()).padStart(2, "0");
+
+dateInput.value = `${year}-${month}-${day}`;
+
+
+/* SAVE DATA */
+
+function saveData() {
+
+    localStorage.setItem(
+        "expenses",
+        JSON.stringify(expenses)
+    );
+
+    localStorage.setItem(
+        "budget",
+        budget
+    );
+}
+
+
+/* ADD / EDIT EXPENSE */
+
+expenseForm.addEventListener("submit", function(event) {
+
+    event.preventDefault();
+
+    const date = dateInput.value;
+
+    const name = nameInput.value.trim();
+
+    const amount = Number(amountInput.value);
+
+    const category = categoryInput.value;
+
+
+    if (!date || !name || amount <= 0) {
+
+        showMessage(
+            "Please enter valid expense details."
+        );
+
+        return;
+    }
+
+
+    const expense = {
+        date: date,
+        name: name,
+        amount: amount,
+        category: category
+    };
+
+
+    if (editIndex === -1) {
+
+        expenses.push(expense);
+
+        showMessage("Expense added successfully.");
+
+    } else {
+
+        expenses[editIndex] = expense;
+
+        showMessage("Expense updated successfully.");
+
+        editIndex = -1;
+
+        saveBtn.textContent = "Add Expense";
+
+        formTitle.textContent = "Add Expense";
+
+        cancelBtn.classList.add("hidden");
+    }
+
+
+    saveData();
+
+    expenseForm.reset();
+
+    dateInput.value = `${year}-${month}-${day}`;
+
+    renderExpenses();
+
+});
+
+
+/* SHOW MESSAGE */
+
+function showMessage(text) {
+
+    message.textContent = text;
+
+    setTimeout(function() {
+
+        message.textContent = "";
+
+    }, 2500);
+}
+
+
+/* DISPLAY EXPENSES */
+
+function renderExpenses() {
+
+    const searchText =
+        searchInput.value.toLowerCase();
+
+    const selectedCategory =
+        filterCategory.value;
+
+
+    const filteredExpenses = expenses.filter(
+        function(expense) {
+
+            const matchesSearch =
+                expense.name
+                    .toLowerCase()
+                    .includes(searchText);
+
+            const matchesCategory =
+                selectedCategory === "" ||
+                expense.category === selectedCategory;
+
+            return matchesSearch && matchesCategory;
+        }
+    );
+
+
+    expenseRows.innerHTML = "";
+
+
+    if (filteredExpenses.length === 0) {
+
+        empty.classList.remove("hidden");
+
+    } else {
+
+        empty.classList.add("hidden");
+
+
+        filteredExpenses.forEach(function(expense) {
+
+            const originalIndex =
+                expenses.indexOf(expense);
+
+
+            const row =
+                document.createElement("tr");
+
+
+            row.innerHTML = `
+
+                <td>${expense.date}</td>
+
+                <td>${escapeHTML(expense.name)}</td>
+
+                <td>₹${expense.amount.toFixed(2)}</td>
+
+                <td>${expense.category}</td>
+
+                <td>
+
+                    <div class="action-buttons">
+
+                        <button
+                            class="edit-btn"
+                            onclick="editExpense(${originalIndex})"
+                        >
+                            Edit
+                        </button>
+
+                        <button
+                            class="delete-btn"
+                            onclick="deleteExpense(${originalIndex})"
+                        >
+                            Delete
+                        </button>
+
+                    </div>
+
+                </td>
+            `;
+
+
+            expenseRows.appendChild(row);
+
+        });
+
+    }
+
+
+    updateSummary();
+
+    updateBudget();
+
+    updateChart();
+
+}
+
+
+/* ESCAPE HTML */
+
+function escapeHTML(text) {
+
+    const div = document.createElement("div");
+
+    div.textContent = text;
+
+    return div.innerHTML;
+}
+
+
+/* EDIT */
+
+function editExpense(index) {
+
+    const expense = expenses[index];
+
+
+    dateInput.value = expense.date;
+
+    nameInput.value = expense.name;
+
+    amountInput.value = expense.amount;
+
+    categoryInput.value = expense.category;
+
+
+    editIndex = index;
+
+
+    formTitle.textContent = "Edit Expense";
+
+    saveBtn.textContent = "Update Expense";
+
+    cancelBtn.classList.remove("hidden");
+
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+}
+
+
+/* CANCEL EDIT */
+
+cancelBtn.addEventListener("click", function() {
+
+    editIndex = -1;
+
+    expenseForm.reset();
+
+    dateInput.value =
+        `${year}-${month}-${day}`;
+
+    formTitle.textContent =
+        "Add Expense";
+
+    saveBtn.textContent =
+        "Add Expense";
+
+    cancelBtn.classList.add("hidden");
+
+});
+
+
+/* DELETE */
+
+function deleteExpense(index) {
+
+    const confirmed =
+        confirm("Delete this expense?");
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    expenses.splice(index, 1);
+
+    saveData();
+
+    renderExpenses();
+
+}
+
+
+/* SUMMARY */
+
+function updateSummary() {
+
+    let total = 0;
+
+
+    expenses.forEach(function(expense) {
+
+        total += Number(expense.amount);
+
+    });
+
+
+    const count = expenses.length;
+
+
+    const average =
+        count > 0 ? total / count : 0;
+
+
+    totalElement.textContent =
+        `₹${total.toFixed(2)}`;
+
+
+    countElement.textContent =
+        count;
+
+
+    averageElement.textContent =
+        `₹${average.toFixed(2)}`;
+
+}
+
+
+/* BUDGET */
+
+document
+    .getElementById("budgetBtn")
+    .addEventListener("click", function() {
+
+        const value =
+            Number(budgetInput.value);
+
+
+        if (value < 0) {
+
+            alert("Enter a valid budget.");
+
+            return;
+        }
+
+
+        budget = value;
+
+        saveData();
+
+        updateBudget();
+
+        budgetInput.value = "";
+
+    });
+
+
+function updateBudget() {
+
+    let total = 0;
+
+
+    expenses.forEach(function(expense) {
+
+        total += Number(expense.amount);
+
+    });
+
+
+    budgetText.textContent =
+        `Budget: ₹${budget.toFixed(2)} | Spent: ₹${total.toFixed(2)}`;
+
+
+    if (budget > 0) {
+
+        let percentage =
+            (total / budget) * 100;
+
+
+        if (percentage > 100) {
+
+            percentage = 100;
+
+        }
+
+
+        progressBar.style.width =
+            percentage + "%";
+
+    } else {
+
+        progressBar.style.width = "0%";
+
+    }
+
+}
+
+
+/* SEARCH */
+
+searchInput.addEventListener(
+    "input",
+    renderExpenses
+);
+
+
+/* CATEGORY FILTER */
+
+filterCategory.addEventListener(
+    "change",
+    renderExpenses
+);
+
+
+/* DARK MODE */
+
+themeBtn.addEventListener("click", function() {
+
+    document.body.classList.toggle("dark");
+
+
+    const darkMode =
+        document.body.classList.contains("dark");
+
+
+    if (darkMode) {
+
+        themeBtn.textContent =
+            "☀️ Light Mode";
+
+        localStorage.setItem(
+            "darkMode",
+            "true"
+        );
+
+    } else {
+
+        themeBtn.textContent =
+            "🌙 Dark Mode";
+
+        localStorage.setItem(
+            "darkMode",
+            "false"
+        );
+
+    }
+
+});
+
+
+/* LOAD DARK MODE */
+
+if (
+    localStorage.getItem("darkMode") === "true"
+) {
+
+    document.body.classList.add("dark");
+
+    themeBtn.textContent =
+        "☀️ Light Mode";
+
+}
+
+
+/* EXPORT CSV */
+
+exportBtn.addEventListener("click", function() {
+
+    if (expenses.length === 0) {
+
+        alert("There are no expenses to export.");
+
+        return;
+    }
+
+
+    let csv =
+        "Date,Description,Amount,Category\n";
+
+
+    expenses.forEach(function(expense) {
+
+        csv +=
+            `"${expense.date}","${expense.name.replace(/"/g, '""')}","${expense.amount}","${expense.category}"\n`;
+
+    });
+
+
+    const blob =
+        new Blob(
+            [csv],
+            { type: "text/csv;charset=utf-8;" }
+        );
+
+
+    const url =
+        URL.createObjectURL(blob);
+
+
+    const link =
+        document.createElement("a");
+
+
+    link.href = url;
+
+    link.download =
+        "expenses.csv";
+
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+
+});
+
+
+/* CHART */
+
+function updateChart() {
+
+    const categoryTotals = {};
+
+
+    expenses.forEach(function(expense) {
+
+        if (!categoryTotals[expense.category]) {
+
+            categoryTotals[expense.category] = 0;
+
+        }
+
+
+        categoryTotals[expense.category] +=
+            Number(expense.amount);
+
+    });
+
+
+    const labels =
+        Object.keys(categoryTotals);
+
+
+    const values =
+        Object.values(categoryTotals);
+
+
+    const canvas =
+        document.getElementById("expenseChart");
+
+
+    if (chart) {
+
+        chart.destroy();
+
+    }
+
+
+    chart = new Chart(canvas, {
+
+        type: "doughnut",
+
+        data: {
+
+            labels: labels,
+
+            datasets: [
+
+                {
+                    data: values
+                }
+
+            ]
+
+        },
+
+        options: {
+
+            responsive: true,
+
+            plugins: {
+
+                legend: {
+
+                    position: "bottom"
+
+                }
+
+            }
+
+        }
+
+    });
+
+}
+
+
+/* INITIAL DISPLAY */
+
+renderExpenses();
